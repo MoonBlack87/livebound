@@ -1,0 +1,13 @@
+{{- /* A strip of screenshots the reader steps through, for a page where every
+       picture is useful but printing them all down the page would bury the
+       text. The prose below stays prose; this carries the visual walkthrough.
+
+       The track is a scroll-snap strip, so it works by swipe and by keyboard
+       scrolling with no script at all. The dots, the arrows and the counter are
+       added by site.js on top of that. */ -}}
+{{- $label := .Get "label" | default "Screenshots" -}}
+<section class="gallery" data-gallery role="region" aria-roledescription="carousel" aria-label="{{ $label }}">
+  <div class="gallery-track" data-gallery-track tabindex="0" aria-label="{{ $label }}">
+    {{ .Inner }}
+  </div>
+</section>

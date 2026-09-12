@@ -1,0 +1,30 @@
+{{ define "main" }}
+<section class="home-hero">
+  <div class="hero-text">
+    <div class="hero-kicker">{{ site.Params.claim }}</div>
+    <h1>Livebound Documentation</h1>
+    <p class="hero-lead">{{ site.Params.subtitle }}</p>
+    <div class="hero-actions">
+      {{ with site.GetPage "/getting-started" }}<a class="button button-primary" href="{{ .RelPermalink }}">Get started</a>{{ end }}
+      {{ with site.GetPage "/guide" }}<a class="button" href="{{ .RelPermalink }}">Open the user guide</a>{{ end }}
+    </div>
+  </div>
+  {{/* Decorative: the greeting is the heading beside it, so a screen reader
+       gains nothing from describing the drawing. */}}
+  <img class="hero-mascot" src="{{ "images/moonbear/welcome.png" | relURL }}" alt="" width="260" height="260">
+</section>
+<div class="home-body prose">{{ .Content }}</div>
+<section class="home-sections" aria-label="Documentation sections">
+  {{ range site.Sections.ByWeight }}
+    <a class="home-card" href="{{ .RelPermalink }}">
+      <span class="home-card-label">{{ .LinkTitle }}</span>
+      {{ with .Description }}<span>{{ . }}</span>{{ end }}
+      <strong aria-hidden="true">Explore →</strong>
+    </a>
+  {{ end }}
+</section>
+<section class="home-links">
+  {{ with site.GetPage "/about" }}<a href="{{ .RelPermalink }}">About Livebound</a>{{ end }}
+  {{ with site.GetPage "/terms-of-use" }}<a href="{{ .RelPermalink }}">Terms of use</a>{{ end }}
+</section>
+{{ end }}

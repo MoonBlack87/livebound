@@ -1,0 +1,24 @@
+{{- /* One screenshot in a gallery. Shows a placeholder while the picture is
+       still to be taken, exactly like the standalone `screenshot` shortcode, so
+       the walkthrough can be written and reviewed before the shots exist. */ -}}
+{{- $src := .Get "src" -}}
+{{- $caption := .Get "caption" -}}
+{{- $alt := .Get "alt" | default $caption -}}
+{{- $request := .Get "request" -}}
+{{- $diskPath := printf "static/%s" $src -}}
+<figure class="gallery-slide" data-gallery-slide data-caption="{{ $caption }}" role="group" aria-roledescription="slide" aria-label="{{ $caption }}">
+  {{- if fileExists $diskPath -}}
+  {{- $cfg := imageConfig $diskPath -}}
+  {{/* Dimensions from the file itself, so the strip reserves its height before
+       the images load and the page below does not jump. */}}
+  <a href="{{ $src | relURL }}"><img src="{{ $src | relURL }}" alt="{{ $alt }}" width="{{ $cfg.Width }}" height="{{ $cfg.Height }}" loading="lazy"></a>
+  {{- else -}}
+  <div class="gallery-placeholder">
+    <span class="gallery-placeholder-mark" aria-hidden="true">▧</span>
+    <strong>Screenshot planned</strong>
+    {{ with $request }}<p>{{ . }}</p>{{ end }}
+    <code>{{ $src }}</code>
+  </div>
+  {{- end -}}
+  <figcaption>{{ $caption }}</figcaption>
+</figure>

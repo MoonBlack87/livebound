@@ -1,0 +1,9 @@
+{{/* An emphasised aside. `mark` is one emoji, `title` a short line,
+     `tone` either empty or "warn" for the amber variant. */}}
+<aside class="callout{{ with .Get "tone" }} callout-{{ . }}{{ end }}">
+  <div class="callout-mark" aria-hidden="true">{{ .Get "mark" | default "💡" }}</div>
+  <div>
+    {{ with .Get "title" }}<p class="callout-title">{{ . }}</p>{{ end }}
+    {{ .Inner | markdownify }}
+  </div>
+</aside>

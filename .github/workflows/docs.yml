@@ -1,0 +1,117 @@
+# Builds the documentation site and publishes it to GitHub Pages.
+#
+# Pages needs the repository to be public, which it becomes at the release. So
+# the order on release day is: make the repository public, then run this
+# workflow once - it is set up for that, with `workflow_dispatch`.
+#
+# The build job earns its place on its own: it runs on every change to
+# `public-doc/**` and asserts that pages were produced, so a broken site costs a
+# red run rather than a published hole.
+
+name: Documentation site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "public-doc/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "public-doc/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Page analytics for this site, read by `layouts/partials/analytics.html`.
+    # They are repository variables rather than values in the repository: they
+    # name one particular Umami installation, and a fork building these pages
+    # must not report into it. Unset means the script is simply not emitted.
+    env:
+      UMAMI_WEBSITE_ID: ${{ vars.UMAMI_DOCS_WEBSITE_ID }}
+      UMAMI_SRC: ${{ vars.UMAMI_DOCS_SRC }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Hugo is a project dependency, not something the runner brings: the same
+      # `npm install` gives it to a developer and to this workflow, so both build
+      # with the same version.
+      - name: Install
+        working-directory: public-doc
+        run: npm ci
+
+      - name: Build
+        working-directory: public-doc
+        # Use hugo.toml's real project-page base URL. Overriding this with "/"
+        # would make relURL assets point outside /livebound/ on GitHub Pages.
+        run: npm run build
+
+      - name: The build must have produced pages
+        run: |
+          set -euo pipefail
+          test -f site-build/index.html
+          count=$(find site-build -name '*.html' | wc -l)
+          echo "built $count pages"
+          test "$count" -gt 5
+          # Whichever way the variables are set, the pages must agree with them.
+          # A partial that silently stopped firing looks exactly like a site
+          # nobody visits, and that is a difference worth a red run.
+          #
+          # Both branches test explicitly and exit. `! grep -q ...` would read
+          # the same and catch nothing: bash suspends errexit for a command
+          # whose status is inverted with `!`, so the step would carry on and
+          # succeed. Measured, not assumed.
+          if [ -n "${UMAMI_WEBSITE_ID:-}" ] && [ -n "${UMAMI_SRC:-}" ]; then
+            if ! grep -q "data-website-id=" site-build/index.html; then
+              echo "::error::the variables are set but no page carries the tracker." \
+                   "Check layouts/partials/analytics.html and the getenv allowlist in hugo.toml." >&2
+              exit 1
+            fi
+            echo "page analytics: on"
+          else
+            if grep -rq "data-website-id=" site-build; then
+              echo "::error::a tracker was built although no repository variables are set." \
+                   "Nothing may report anywhere from an unconfigured build." >&2
+              exit 1
+            fi
+            echo "page analytics: off, no repository variables set"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation-site
+          path: site-build
+          retention-days: 7
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: documentation-site
+          path: site-build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-build
+      - id: deployment
+        uses: actions/deploy-pages@v4

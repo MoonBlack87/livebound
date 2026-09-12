@@ -1,0 +1,24 @@
+{{- $src := .Get "src" -}}
+{{- $title := .Get "title" | default "Livebound screenshot" -}}
+{{- $alt := .Get "alt" | default $title -}}
+{{- $request := .Get "request" -}}
+{{- $diskPath := printf "static/%s" $src -}}
+{{- if fileExists $diskPath -}}
+{{- $cfg := imageConfig $diskPath -}}
+<figure class="doc-screenshot">
+  {{/* width and height come from the file itself. Without them a lazy image
+       reserves no space, so the page jumps as you scroll past it - and every
+       screenshot here is taller than a line of text. */}}
+  <a href="{{ $src | relURL }}"><img src="{{ $src | relURL }}" alt="{{ $alt }}" width="{{ $cfg.Width }}" height="{{ $cfg.Height }}" loading="lazy"></a>
+  <figcaption>{{ $title }}</figcaption>
+</figure>
+{{- else -}}
+<figure class="screenshot-placeholder" data-screenshot-placeholder>
+  <div class="screenshot-placeholder-mark" aria-hidden="true">▧</div>
+  <div>
+    <strong>Screenshot planned: {{ $title }}</strong>
+    {{ with $request }}<p>{{ . }}</p>{{ end }}
+    <code>{{ $src }}</code>
+  </div>
+</figure>
+{{- end -}}

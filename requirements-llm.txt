@@ -1,0 +1,30 @@
+# Environment for the LLM worker subprocess.
+#
+# Installed into a SEPARATE virtualenv (.venv-llm), not the app's own: the app
+# stays free of a multi-gigabyte ML stack, and the worker runs under whichever
+# interpreter actually has torch.
+#
+#   uv venv .venv-llm
+#   uv pip install --python .venv-llm/bin/python -r requirements-llm.txt -c constraints-llm.txt
+#
+# uv is what `webui.sh --llm` uses when it is installed, and a venv it creates
+# has no pip of its own - `.venv-llm/bin/python -m pip` fails there. Without uv:
+#
+#   python3 -m venv .venv-llm
+#   .venv-llm/bin/python -m pip install -r requirements-llm.txt -c constraints-llm.txt
+
+torch>=2.4
+transformers>=4.45
+accelerate>=0.34
+safetensors>=0.4
+sentencepiece>=0.2
+protobuf>=4.25
+
+# 4-bit quantisation, so a 4B model fits next to image generation on one GPU.
+bitsandbytes>=0.43.2
+
+# Required for the VISION path. Without these two, the image processor fails to
+# load and the worker silently falls back to text-only - the model then never
+# looks at the pictures, which is most of the point of the suggestions.
+pillow>=10.0
+torchvision>=0.19

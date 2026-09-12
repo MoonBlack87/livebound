@@ -1,0 +1,7 @@
+# Text is normalised unless a platform-specific starter needs fixed bytes.
+* text=auto
+
+# Git stores text as LF and converts these starters to CRLF on checkout.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.sh text eol=lf

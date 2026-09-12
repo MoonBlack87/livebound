@@ -1,0 +1,18 @@
+{{- /*
+  Page analytics for the documentation site, and for nothing else.
+
+  The website id and the script URL are read from the build environment, never
+  from `hugo.toml`. Two reasons, and the second is the one that matters: the
+  values name the maintainer's own analytics installation, and a fork that
+  builds this site must not report into it. A local build has neither variable
+  set and therefore emits nothing at all - reading the documentation on your own
+  machine is not a page view.
+
+  `hugo.toml` carries the `security.funcs.getenv` pattern that lets these two
+  through; without it Hugo refuses to read them, which is the intended default.
+*/ -}}
+{{- $id := os.Getenv "UMAMI_WEBSITE_ID" -}}
+{{- $src := os.Getenv "UMAMI_SRC" -}}
+{{- if and $id $src -}}
+<script defer src="{{ $src }}" data-website-id="{{ $id }}"></script>
+{{- end -}}

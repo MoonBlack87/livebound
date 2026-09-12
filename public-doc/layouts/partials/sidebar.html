@@ -1,0 +1,24 @@
+<nav id="docs-sidebar" class="sidebar" aria-label="Documentation" data-sidebar>
+  <div class="sidebar-inner">
+    <a class="sidebar-home{{ if .IsHome }} is-active{{ end }}" href="{{ site.Home.RelPermalink }}">Overview</a>
+    {{/* A standalone page with a small weight is an entry point and belongs
+         beside Overview; a heavy one (About, Terms) is an appendix and sits at
+         the bottom. The split is the weight, so a new page picks its own side. */}}
+    {{ range where site.RegularPages.ByWeight "Section" "" }}
+      {{ if lt .Weight 10 }}<a class="sidebar-standalone{{ if eq $.RelPermalink .RelPermalink }} is-active{{ end }}" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>{{ end }}
+    {{ end }}
+    {{ range site.Sections.ByWeight }}
+      <section class="nav-section">
+        <a class="nav-section-title{{ if eq $.Section .Section }} is-active{{ end }}" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+        <ul>
+          {{ range .RegularPages.ByWeight }}
+            <li><a{{ if eq $.RelPermalink .RelPermalink }} class="is-active" aria-current="page"{{ end }} href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></li>
+          {{ end }}
+        </ul>
+      </section>
+    {{ end }}
+    {{ range where site.RegularPages.ByWeight "Section" "" }}
+      {{ if ge .Weight 10 }}<a class="sidebar-standalone{{ if eq $.RelPermalink .RelPermalink }} is-active{{ end }}" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>{{ end }}
+    {{ end }}
+  </div>
+</nav>

@@ -1,0 +1,19 @@
+{{ define "main" }}
+<section class="doc-page section-page">
+  {{ partial "breadcrumbs.html" . }}
+  <header class="page-header">
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}<p class="page-description">{{ . }}</p>{{ end }}
+  </header>
+  {{ with .Content }}<div class="prose section-intro">{{ . }}</div>{{ end }}
+  <div class="page-grid">
+    {{ range .RegularPages.ByWeight }}
+      <a class="doc-card" href="{{ .RelPermalink }}">
+        <span class="doc-card-title">{{ .LinkTitle }}</span>
+        {{ with .Description }}<span class="doc-card-description">{{ . }}</span>{{ end }}
+        <span class="doc-card-arrow" aria-hidden="true">→</span>
+      </a>
+    {{ end }}
+  </div>
+</section>
+{{ end }}

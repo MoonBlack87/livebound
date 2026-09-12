@@ -1,0 +1,60 @@
+[project]
+name = "livebound"
+version = "1.0.0"
+description = "Local-first publishing for Civitai creators."
+authors = [{ name = "Moonbear_AIArt (MoonBlack87)" }]
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pillow>=10.0",
+    "httpx>=0.27",
+    # First-start setup sends the selected data path and optional database
+    # backup together as multipart form data. This is FastAPI's parser for it;
+    # it ships a platform-independent py3-none-any wheel.
+    "python-multipart>=0.0.20",
+    # The loading placeholder CivitAI shows while an image loads. Undeclared
+    # until now, and its import sits behind a bare `except` - so on a clean
+    # install every image silently went up without one, which is the whole
+    # reason the tRPC create path is preferred over MCP's.
+    "blurhash>=1.1",
+    # A local model's answer is often JSON in three ways at once: an unquoted
+    # string value, unquoted list items, a raw newline inside a string. Measured
+    # over 220 cells on 2026-09-03, hand-written rules covering all three
+    # rescued 7 of one model's 16 failures; this library rescued 16 of 16, and
+    # 28 discarded answers across the run. The hosted route is fixed at the
+    # source instead (`endpoint.ANSWER_SCHEMA`); this covers the local one,
+    # which has no equivalent without a far larger dependency.
+    "json-repair>=0.30",
+]
+
+[project.scripts]
+livebound = "backend.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# Without an explicit `select`, ruff runs only its defaults (E4, E7, E9, F) - so
+# an `ignore` list naming rules that were never selected did nothing at all, and
+# "ruff passes" meant less than it sounded.
+#
+# These are the rules that hold today with no judgement calls left in them.
+# BLE001 (31 sites), S (635) and TRY (108) each need a pass of their own before
+# they can be turned on honestly.
+select = ["E", "F", "I", "B", "C4", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

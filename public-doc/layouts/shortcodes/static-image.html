@@ -1,0 +1,8 @@
+{{- $src := .Get "src" -}}
+{{- $href := .Get "href" | default $src -}}
+{{- $title := .Get "title" | default "Livebound image" -}}
+{{- $alt := .Get "alt" | default $title -}}
+<figure class="doc-screenshot">
+  <a href="{{ $href | relURL }}"><img src="{{ $src | relURL }}" alt="{{ $alt }}" loading="lazy"></a>
+  {{ with $title }}<figcaption>{{ . }}</figcaption>{{ end }}
+</figure>

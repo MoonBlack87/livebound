@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv-llm/
+webui.settings.sh
+webui.settings.bat
+.pytest_cache/
+.ruff_cache/
+# Keep a stray local build directory out of the release commit. The publish job
+# adds the generated frontend/dist tree, but must never add node_modules.
+node_modules/
+*.db
+*.db-shm
+*.db-wal
+tmp_images/
+*.tsbuildinfo
+# frontend/dist is deliberately tracked in a public release. If sourcemaps are
+# enabled later, they would ship source text for the content gate to scan.

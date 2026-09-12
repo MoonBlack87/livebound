@@ -1,0 +1,9 @@
+{{/* A decorative illustration. `alt=""` on purpose where the picture repeats
+     what the text already says - a screen reader should skip it, not read it. */}}
+<img
+  src="{{ .Get "src" | relURL }}"
+  alt="{{ .Get "alt" }}"
+  {{ with .Get "width" }}width="{{ . }}"{{ end }}
+  {{ with .Get "class" }}class="{{ . }}"{{ end }}
+  loading="lazy"
+>

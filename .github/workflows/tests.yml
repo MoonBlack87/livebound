@@ -1,0 +1,56 @@
+name: Test suite
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version for the test environment
+        required: false
+        type: string
+        default: "3.12"
+      node-version:
+        description: Node version for the frontend build
+        required: false
+        type: string
+        default: "20"
+      checkout-ref:
+        description: Optional ref to check out before running the suite
+        required: false
+        type: string
+
+jobs:
+  test:
+    timeout-minutes: 20
+    name: Tests, lint and frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ inputs.python-version }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: pip install --upgrade pip
+      - run: pip install -e . -c constraints-release.txt --build-constraint constraints-release.txt && pip install pytest pytest-asyncio ruff -c constraints-release.txt --build-constraint constraints-release.txt
+      - run: |
+          paths=(backend test)
+          if [[ -d tools ]]; then
+            paths+=(tools)
+          fi
+          ruff check "${paths[@]}"
+
+      # Build frontend assets before the backend tests: a client-side route
+      # needs the app shell.
+      - run: npm ci --no-audit --no-fund
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+      - run: pytest test -q

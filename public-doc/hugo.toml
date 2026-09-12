@@ -1,0 +1,72 @@
+# Derivable from the repository name: a project page is
+# https://<user>.github.io/<repo>/, with the user lowercased. The release
+# workflow builds with `--baseURL "/"` so the site also works from a directory,
+# and this value is what a local build and any absolute link use.
+# Change it here if the site ever moves to a domain of its own.
+baseURL = "https://moonblack87.github.io/livebound/"
+languageCode = "en"
+title = "Livebound Documentation"
+publishDir = "../site-build"
+enableRobotsTXT = true
+disableKinds = ["taxonomy", "term"]
+
+[params]
+  description = "Documentation for Livebound, a local-first publishing workspace for CivitAI creators."
+  claim = "From local to live."
+  subtitle = "Local-first publishing for CivitAI creators."
+  repositoryURL = "https://github.com/MoonBlack87/livebound"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = false
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 3
+    ordered = false
+  [markup.highlight]
+    noClasses = true
+    style = "github-dark"
+
+# The analytics partial reads the Umami website id and script URL from the build
+# environment instead of from this file, so neither value lives in the
+# repository and a fork does not report into somebody else's installation.
+# Naming `getenv` replaces Hugo's default list, so the two defaults are repeated
+# here rather than lost.
+[security]
+  [security.funcs]
+    getenv = ['^HUGO_', '^CI$', '^UMAMI_WEBSITE_ID$', '^UMAMI_SRC$']
+
+[caches]
+  [caches.images]
+    dir = ":cacheDir/images"
+
+[minify]
+  minifyOutput = true
+
+# The brand assets live with the frontend, which is their only source. Hugo
+# mounts that directory into the static tree instead of a copy being kept here:
+# a copy drifts the first time a logo is redrawn and nobody remembers the second
+# place. The model-comparison contact sheets follow the same rule: the full
+# measurement remains under docs/, while the documentation site serves the same
+# image files instead of maintaining copies. Defining any mount replaces Hugo's
+# defaults, so the ordinary ones are listed again below.
+[module]
+  [[module.mounts]]
+    source = "content"
+    target = "content"
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "../frontend/src/assets/brand"
+    target = "static/brand"
+  [[module.mounts]]
+    source = "../docs/model-comparison"
+    target = "static/model-comparison"

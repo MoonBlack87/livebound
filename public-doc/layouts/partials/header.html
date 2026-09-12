@@ -1,0 +1,9 @@
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="{{ site.Home.RelPermalink }}" aria-label="Livebound documentation home"><img src="{{ "brand/livebound-lockup-horizontal.svg" | relURL }}" alt="Livebound" height="28"><span class="brand-context">Docs</span></a>
+    <div class="header-actions">
+      {{ with site.Params.repositoryURL }}<a class="header-link" href="{{ . }}" rel="noopener noreferrer">Repository</a>{{ end }}
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="docs-sidebar" data-nav-toggle><span class="sr-only">Toggle documentation navigation</span><span aria-hidden="true">☰</span></button>
+    </div>
+  </div>
+</header>

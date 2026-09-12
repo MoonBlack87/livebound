@@ -1,0 +1,13 @@
+{
+  "name": "livebound-docs",
+  "private": true,
+  "description": "The Livebound documentation site. Hugo comes with the project, so anybody who can build the frontend can build the site.",
+  "scripts": {
+    "build": "hugo --gc --minify",
+    "serve": "hugo server --buildDrafts --navigateToChanged",
+    "clean": "rm -rf ../site-build"
+  },
+  "devDependencies": {
+    "hugo-extended": "0.140.2"
+  }
+}

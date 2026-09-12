@@ -1,0 +1,11 @@
+name: CI
+
+on:
+  # The release workflow runs this suite for every rc-* tag. Keep this workflow
+  # available for an explicit check, but do not spend Actions minutes on every
+  # ordinary push or pull request.
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
