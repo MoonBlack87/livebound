@@ -2,7 +2,7 @@
 
 The CivitAI numbers here are not guesses: each one is transcribed from the
 civitai/civitai source and the comment names where it lives. They are collected
-in one place because several of them (the 60 minute lead time above all) have to
+in one place because several of them (the scheduling lead time above all) have to
 be enforced identically by the scheduler, the validator and the push pipeline.
 """
 
@@ -181,7 +181,12 @@ def image_url(key: str, *, width: int | None = None, original: bool = False) -> 
 # --- CivitAI rules ----------------------------------------------------------
 
 #: server/common/constants.ts :: POST_MINIMUM_SCHEDULE_MINUTES
-POST_MINIMUM_SCHEDULE_MINUTES = 60
+POST_MINIMUM_SCHEDULE_MINUTES = 10
+#: One minute for the outbound request to reach CivitAI.
+POST_SCHEDULE_DISPATCH_HEADROOM_MINUTES = 1
+POST_DISPATCH_SCHEDULE_MINUTES = (
+    POST_MINIMUM_SCHEDULE_MINUTES + POST_SCHEDULE_DISPATCH_HEADROOM_MINUTES
+)
 
 #: CivitAI's editor limits a post to 20 images; we deliberately keep that
 #: interface limit although no server-side enforcement was found. Twenty is

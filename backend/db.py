@@ -48,7 +48,7 @@ class MigrationBackupError(RuntimeError):
 def now_iso() -> str:
     """The one timestamp format used everywhere: UTC, second precision, trailing ``Z``.
 
-    Scheduling is the app's core job and a 60-minute boundary is unforgiving, so no local time
+    Scheduling is the app's core job and its time boundary is unforgiving, so no local time
     and no naive datetime is ever persisted.
     """
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")

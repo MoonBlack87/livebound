@@ -104,6 +104,7 @@ def mutate(
     *,
     date_fields: tuple[str, ...] = (),
     retryable: bool = True,
+    prepared_token: str | None = None,
 ) -> Any:
     """POST a superjson mutation.
 
@@ -120,6 +121,7 @@ def mutate(
         procedure=procedure,
         transport="trpc",
         retryable=retryable,
+        **({"prepared_token": prepared_token} if prepared_token is not None else {}),
     )
     return _unwrap(response, procedure)
 
@@ -143,10 +145,11 @@ def post_update(
     detail: str | None = None,
     published_at: str | None = None,
     collection_id: int | None = None,
+    prepared_token: str | None = None,
 ) -> Any:
     """Update a post; the only way to set a future ``publishedAt``.
 
-    Callers must have re-validated the 60-minute lead time immediately before
+    Callers must have checked the serialized outbound dispatch time immediately before
     calling this. CivitAI does not reject a too-near date - it publishes at once.
     ``published_at`` is expected as an ISO-8601 UTC string ending in ``Z``.
     """
@@ -163,7 +166,10 @@ def post_update(
         payload["publishedAt"] = published_at
         date_fields = ("publishedAt",)
 
-    result = mutate("post.update", payload, date_fields=date_fields)
+    result = mutate(
+        "post.update", payload, date_fields=date_fields,
+        retryable=published_at is None, prepared_token=prepared_token,
+    )
     if published_at is not None:
         remote = post_get(post_id)
         actual = remote.get("publishedAt") if isinstance(remote, dict) else None

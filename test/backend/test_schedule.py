@@ -19,14 +19,14 @@ NOW = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
 
 
 def test_too_soon_is_rejected():
-    check = schedule.validate(NOW + timedelta(minutes=59), now=NOW)
+    check = schedule.validate(NOW + timedelta(minutes=9), now=NOW)
     assert not check.ok
     assert check.code == "too_soon"
 
 
-def test_the_sixty_minute_boundary_is_the_floor():
-    assert schedule.validate(NOW + timedelta(minutes=60), now=NOW).ok
-    assert schedule.earliest_publish(NOW) == NOW + timedelta(minutes=60)
+def test_the_ten_minute_boundary_is_the_platform_floor():
+    assert schedule.validate(NOW + timedelta(minutes=10), now=NOW).ok
+    assert schedule.earliest_publish(NOW) == NOW + timedelta(minutes=10)
 
 
 def test_more_than_three_months_ahead_is_rejected():
@@ -68,12 +68,12 @@ def test_a_bare_number_means_minutes():
 
 
 def test_relative_offsets_below_the_floor_are_raised_not_rejected():
-    """"In 30 minutes" is a clear intent; the honest answer is the soonest
+    """"In 5 minutes" is a clear intent; the honest answer is the soonest
     CivitAI allows, not a failed push."""
     resolved = schedule.resolve(
-        mode=schedule.RELATIVE, offset_minutes=30, scheduled_at=None, now=NOW
+        mode=schedule.RELATIVE, offset_minutes=5, scheduled_at=None, now=NOW
     )
-    assert resolved == schedule.earliest_publish(NOW)
+    assert resolved == schedule.earliest_dispatch(NOW)
     assert schedule.validate(resolved, now=NOW).ok
 
 
@@ -115,13 +115,13 @@ def test_iso_round_trip_keeps_the_instant():
 
 def test_spread_keeps_the_interval_and_never_starts_too_soon():
     times = schedule.spread(3, NOW, 23, now=NOW)
-    assert times[0] == schedule.earliest_publish(NOW)
+    assert times[0] == schedule.earliest_dispatch(NOW)
     assert times[1] - times[0] == timedelta(minutes=23)
     assert all(schedule.validate(when, now=NOW).ok for when in times)
 
 
 def test_the_minimum_matches_civitai():
-    assert config.POST_MINIMUM_SCHEDULE_MINUTES == 60
+    assert config.POST_MINIMUM_SCHEDULE_MINUTES == 10
 
 
 # --- confirmed time vs. local plan -------------------------------------------
@@ -265,3 +265,28 @@ def test_a_confirmed_time_on_the_window_edge_survives_the_prefilter(client, monk
 
     assert [entry["title"] for entry in calendar["entries"]] == ["On the edge"]
 
+
+
+def test_dispatch_reserves_one_minute_above_the_platform_floor():
+    assert not schedule.validate_dispatch(NOW + timedelta(minutes=10), now=NOW).ok
+    assert schedule.validate_dispatch(NOW + timedelta(minutes=11), now=NOW).ok
+    assert schedule.relative_floor_minutes() == 11
+    assert schedule.resolve(
+        mode=schedule.RELATIVE, offset_minutes=15, scheduled_at=None, now=NOW
+    ) == NOW + timedelta(minutes=15)
+
+
+def test_relative_floor_survives_millisecond_wire_serialization():
+    now = NOW.replace(microsecond=123456)
+    resolved = schedule.resolve(
+        mode=schedule.RELATIVE, offset_minutes=5, scheduled_at=None, now=now
+    )
+    stamp, check = schedule.outbound_stamp(resolved, now=now, relative=True)
+    assert check.ok
+    assert schedule.parse_iso(stamp) >= schedule.earliest_dispatch(now)
+    assert schedule.parse_iso(stamp) - schedule.earliest_dispatch(now) < timedelta(milliseconds=1)
+
+    _, fixed_check = schedule.outbound_stamp(
+        schedule.earliest_dispatch(now), now=now, relative=False
+    )
+    assert not fixed_check.ok, "an absolute timestamp must not be silently moved"

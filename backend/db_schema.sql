@@ -2,7 +2,7 @@
 -- Livebound schema
 --
 -- Every timestamp is ISO-8601 UTC with a trailing Z. Scheduling is this app's
--- core job and CivitAI's 60-minute boundary is unforgiving, so local time
+-- core job and CivitAI's scheduling boundary is unforgiving, so local time
 -- exists only in the browser.
 --
 -- Recurring theme below: local *intent* and confirmed *remote truth* live in

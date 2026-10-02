@@ -16,6 +16,7 @@ from ..civitai.errors import (
 )
 from ..civitai.scopes import MissingScope
 from ..posts.lifecycle import TransitionError
+from ..posts.schedule import ScheduleRejected
 from ..store import posts as post_store
 
 
@@ -137,6 +138,8 @@ def handle_civitai(exc: Exception) -> HTTPException:
         if isinstance(code, str) and code:
             return api_error(code, str(exc), exc.status or 502)
         return HTTPException(502, str(exc))
+    if isinstance(exc, ScheduleRejected):
+        return api_error(exc.code, str(exc), 400, **exc.params)
     if isinstance(exc, ValueError):
         return HTTPException(400, str(exc))
     raise exc

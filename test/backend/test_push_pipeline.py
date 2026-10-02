@@ -246,6 +246,7 @@ def fake(monkeypatch):
     stub = FakeCivitai()
     import backend.posts.sync as sync_module
 
+    monkeypatch.setattr(civitai_client, "prepare_token", lambda: "test-token")
     monkeypatch.setattr(push.mcp, "upload_image", stub.upload_image)
     monkeypatch.setattr(push.mcp, "get_post", stub.get_post)
     monkeypatch.setattr(push.mcp, "publish_post", stub.publish_post)
@@ -564,7 +565,9 @@ def test_patching_an_absolute_time_reschedules_the_remote_post(fake, client, rea
     )
 
     assert response.status_code == 200
-    assert fake.updates == [{"id": remote_id, "published_at": later}]
+    assert fake.updates == [{
+        "id": remote_id, "published_at": later, "prepared_token": "test-token",
+    }]
     returned = response.json()
     assert returned["scheduled_at"] == later
     assert returned["remote_published_at"] == later
@@ -2023,7 +2026,7 @@ def test_an_expired_absolute_time_stays_a_draft_and_the_batch_carries_on(
     from backend.posts import schedule
 
     real_now = schedule.utcnow()
-    when = real_now + timedelta(minutes=70)
+    when = real_now + timedelta(minutes=15)
     expiring = client.post(
         "/api/posts",
         json={
@@ -2047,7 +2050,7 @@ def test_an_expired_absolute_time_stays_a_draft_and_the_batch_carries_on(
     monkeypatch.setattr(schedule, "utcnow", lambda: real_now + clock["offset"])
 
     def slow_upload(path, content_type=None):
-        clock["offset"] = timedelta(minutes=20)
+        clock["offset"] = timedelta(minutes=6)
         return fake.upload_image(path, content_type)
 
     monkeypatch.setattr(push.mcp, "upload_image", slow_upload)
@@ -2058,7 +2061,7 @@ def test_an_expired_absolute_time_stays_a_draft_and_the_batch_carries_on(
     assert stopped["state"] == lifecycle.REMOTE_DRAFT
     assert stopped["remote_published_at"] is None
     assert all(image["remote_image_id"] for image in post_store.images(expiring))
-    assert "60 minutes" in stopped["last_error"]
+    assert "10 minutes" in stopped["last_error"]
     assert "still a draft" in stopped["last_error"]
     assert fake.posts[stopped["remote_post_id"]]["publishedAt"] is None
 
@@ -2200,3 +2203,46 @@ def test_the_daily_limit_stops_the_run_and_leaves_the_rest_alone(
     assert job.error, "and the run says why"
     assert post_store.get(first)["state"] != lifecycle.FAILED
     assert post_store.get(second)["state"] == lifecycle.READY, "the rest is untouched"
+
+
+def test_short_relative_publish_clock_is_captured_after_token_preparation(
+    fake, ready_post, monkeypatch
+):
+    now = schedule.parse_iso("2026-10-02T12:00:00.123456Z")
+    clock = {"now": now}
+    monkeypatch.setattr(schedule, "utcnow", lambda: clock["now"])
+    post_store.update(ready_post, schedule_offset_minutes=5)
+
+    def prepare():
+        clock["now"] += timedelta(minutes=3)
+        return "test-token"
+
+    monkeypatch.setattr(civitai_client, "prepare_token", prepare)
+    run_push(ready_post)
+    post = post_store.get(ready_post)
+    assert post["state"] == lifecycle.SCHEDULED
+    assert schedule.parse_iso(post["remote_published_at"]) >= clock["now"] + timedelta(minutes=11)
+    assert fake.updates[-1]["prepared_token"] == "test-token"
+
+
+def test_absolute_publish_stops_if_token_preparation_consumes_the_reserve(
+    fake, ready_post, monkeypatch
+):
+    now = schedule.parse_iso("2026-10-02T12:00:00.000Z")
+    clock = {"now": now}
+    monkeypatch.setattr(schedule, "utcnow", lambda: clock["now"])
+    post_store.update(
+        ready_post, schedule_mode=schedule.ABSOLUTE,
+        scheduled_at=schedule.iso_z(now + timedelta(minutes=13)),
+    )
+
+    def prepare():
+        clock["now"] += timedelta(minutes=3)
+        return "test-token"
+
+    monkeypatch.setattr(civitai_client, "prepare_token", prepare)
+    run_push(ready_post)
+    post = post_store.get(ready_post)
+    assert post["state"] == lifecycle.REMOTE_DRAFT
+    assert post["remote_published_at"] is None
+    assert not fake.updates

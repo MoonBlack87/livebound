@@ -1292,12 +1292,12 @@ def test_spread_never_starts_below_the_minimum(client, scanned):
         "/api/schedule/spread",
         json={"post_ids": [post_id], "start_offset_minutes": 5, "interval_minutes": 30},
     ).json()
-    assert plan["plan"][0]["offset_minutes"] >= 60
+    assert plan["plan"][0]["offset_minutes"] == 11
 
 
 def test_the_calendar_reports_the_blocked_window(client):
     data = client.get("/api/schedule/calendar").json()
-    assert data["min_lead_minutes"] == 60
+    assert data["min_lead_minutes"] == 11
     assert data["earliest"] > data["now"]
 
 
@@ -1704,3 +1704,22 @@ def test_a_pushing_post_keeps_its_files_and_its_credits(client, scanned):
     post_store.set_fields(post_id, state=lifecycle.PUBLISHED)
     renamed = client.patch(f"/api/resources/{resource_id}", json={"name": "Renamed"})
     assert renamed.status_code == 200
+
+
+def test_reschedule_preserves_intent_when_dispatch_reserve_is_missing(client, monkeypatch):
+    from backend.posts import schedule
+
+    now = schedule.parse_iso("2026-10-02T12:00:00.000Z")
+    monkeypatch.setattr(schedule, "utcnow", lambda: now)
+    post_id = client.post("/api/posts", json={"title": "Keep plan"}).json()["id"]
+    before = client.get(f"/api/posts/{post_id}").json()
+    response = client.post(
+        f"/api/posts/{post_id}/reschedule",
+        json={"scheduled_at": "2026-10-02T12:10:30.000Z"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "dispatch_too_soon"
+    assert response.json()["detail"]["params"] == {"platform": 10, "dispatch": 11}
+    after = client.get(f"/api/posts/{post_id}").json()
+    assert after["scheduled_at"] == before["scheduled_at"]
+    assert after["schedule_offset_minutes"] == before["schedule_offset_minutes"]

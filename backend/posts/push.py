@@ -725,6 +725,7 @@ def _apply_publish(run_id: int, post_id: int, post: dict[str, Any]) -> str | Non
         _record_publish_time(post_id, remote_id, remote_published_at)
         return remote_published_at
 
+    prepared_token = trpc.client.prepare_token()
     now = schedule.utcnow()
     when = schedule.resolve(
         mode=post.get("schedule_mode") or schedule.RELATIVE,
@@ -738,18 +739,21 @@ def _apply_publish(run_id: int, post_id: int, post: dict[str, Any]) -> str | Non
             "is still a draft."
         )
 
-    check = schedule.validate(when, now=now)
+    requested, check = schedule.outbound_stamp(
+        when, now=now,
+        relative=(post.get("schedule_mode") or schedule.RELATIVE) == schedule.RELATIVE,
+    )
     if not check.ok:
         raise LeadTimeExpired(
             f"The publish time cannot be sent ({check.message}). The post is still "
             "a draft; choose a later time and resume the push."
         )
 
-    requested = schedule.iso_z(when)
     with _action_step(
         "push.post_update", run_id, post_id, remote_post_id=remote_id
     ) as outcome:
-        remote = trpc.post_update(remote_id, published_at=requested)
+        remote = trpc.post_update(remote_id, published_at=requested,
+                                  prepared_token=prepared_token)
         actual = remote.get("publishedAt") if isinstance(remote, dict) else None
         if not _same_publish_time(actual, requested):
             raise RuntimeError(

@@ -251,7 +251,7 @@ body {
   animation: fade-in 160ms ease-out;
 }
 
-/* The 60 minutes nobody may schedule into, drawn rather than explained. */
+/* The scheduling dispatch window, drawn rather than explained. */
 .blocked-hatch {
   background-image: repeating-linear-gradient(
     45deg,

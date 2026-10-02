@@ -156,3 +156,41 @@ def test_post_update_refuses_a_different_readback(monkeypatch):
 
     with pytest.raises(CivitaiError, match="did not keep"):
         trpc.post_update(7, published_at="2026-08-26T12:00:00.000Z")
+
+
+def test_publish_time_uses_prepared_token_without_retries(monkeypatch):
+    sent = {}
+    stamp = "2026-10-02T12:11:00.000Z"
+
+    def post_json(url, body, **kwargs):
+        sent.update(body=body, kwargs=kwargs)
+        return {"result": {"data": {"json": None}}}
+
+    monkeypatch.setattr(trpc.client, "post_json", post_json)
+    monkeypatch.setattr(trpc, "post_get", lambda post_id: {"id": post_id, "publishedAt": stamp})
+    trpc.post_update(7, published_at=stamp, prepared_token="test-token")
+    assert sent["kwargs"]["retryable"] is False
+    assert sent["kwargs"]["prepared_token"] == "test-token"
+    assert sent["body"]["meta"]["values"]["publishedAt"] == ["Date"]
+
+    trpc.post_update(7, title="Keep normal text retries")
+    assert sent["kwargs"]["retryable"] is True
+    assert "prepared_token" not in sent["kwargs"]
+
+
+def test_uncertain_publish_time_is_not_automatically_sent_again(monkeypatch):
+    import httpx
+
+    from backend.civitai.errors import CivitaiError
+
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(503, text="Temporary failure")
+
+    monkeypatch.setattr(trpc.client, "_pool", httpx.Client(transport=httpx.MockTransport(handler)))
+    monkeypatch.setattr(trpc.client, "_request_token", lambda authenticated: "test-token")
+    with pytest.raises(CivitaiError):
+        trpc.post_update(7, published_at="2026-10-02T12:11:00.000Z")
+    assert len(calls) == 1
