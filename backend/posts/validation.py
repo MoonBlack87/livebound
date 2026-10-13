@@ -246,7 +246,7 @@ def _check_schedule(post: dict[str, Any], now: datetime) -> list[Issue]:
             Issue(ERROR, "no_schedule", "No publish time is set.", "schedule")
         ]
 
-    check = schedule.validate(when, now=now)
+    check = schedule.validate_dispatch(when, now=now)
     if not check.ok:
         # A relative plan is resolved at push time and cannot be too soon, so only
         # an absolute one can land here for that reason.

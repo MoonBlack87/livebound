@@ -515,7 +515,7 @@
           <ScheduleField
             post={current}
             disabled={readOnly || !current.can_schedule}
-            minLeadMinutes={app.settings?.limits.min_schedule_minutes ?? 60}
+            minLeadMinutes={app.settings?.limits.min_schedule_minutes ?? 11}
             onChange={(body) => patch(postId, body)}
           />
 

@@ -29,7 +29,7 @@ def calendar(start: str | None = None, end: str | None = None) -> dict[str, Any]
     is what an unfiltered first load wants.
 
     The blocked window is returned rather than described, so the calendar can
-    draw the 60 minutes nobody may schedule into instead of explaining them.
+    draw the dispatch window nobody may schedule into instead of explaining them.
     """
     now = sched.utcnow()
     entries: list[dict[str, Any]] = []
@@ -73,9 +73,9 @@ def calendar(start: str | None = None, end: str | None = None) -> dict[str, Any]
         "entries": sorted(entries, key=lambda item: item["publish_at"]),
         "per_day": dict(per_day),
         "now": sched.iso_z(now),
-        "earliest": sched.iso_z(sched.earliest_publish(now)),
+        "earliest": sched.iso_z(sched.earliest_dispatch(now)),
         "latest": sched.iso_z(sched.latest_publish(now)),
-        "min_lead_minutes": config.POST_MINIMUM_SCHEDULE_MINUTES,
+        "min_lead_minutes": config.POST_DISPATCH_SCHEDULE_MINUTES,
         "daily_limit": budget["limit"],
         "used_today": budget["used"],
     }

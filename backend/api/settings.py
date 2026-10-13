@@ -88,7 +88,7 @@ def get_settings() -> dict[str, Any]:
             "generation_time_patterns", list(config.DEFAULT_GENERATION_TIME_PATTERNS)
         ),
         "limits": {
-            "min_schedule_minutes": config.POST_MINIMUM_SCHEDULE_MINUTES,
+            "min_schedule_minutes": config.POST_DISPATCH_SCHEDULE_MINUTES,
             "max_schedule_months": config.POST_MAXIMUM_SCHEDULE_MONTHS,
             "max_upload_bytes": config.MCP_UPLOAD_MAX_BYTES,
         },

@@ -28,7 +28,7 @@
     try {
       const result = await api.spread({
         post_ids: selected,
-        start_offset_minutes: Number(startOffset) || 60,
+        start_offset_minutes: Number(startOffset) || 0,
         interval_minutes: interval,
         apply,
       })

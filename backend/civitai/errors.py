@@ -52,7 +52,7 @@ class AccountNotReady(CivitaiError):
 
 
 class LeadTimeExpired(CivitaiError):
-    """The 60-minute window closed while we were uploading.
+    """The scheduling lead-time window closed while we were uploading.
 
     Raised locally, never by the server. The post stays an unpublished draft.
     """

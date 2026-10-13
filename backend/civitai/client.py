@@ -119,13 +119,22 @@ def require_token() -> str:
 def _request_token(authenticated: bool) -> str | None:
     if not authenticated:
         return None
+    _check_credential_destination()
+    return require_token()
+
+
+def _check_credential_destination() -> None:
     if not config.site_host_allowed(config.site_base()):
         raise AuthError(
             "The configured CivitAI site is not allowed to receive the credential. "
             "Choose civitai.red or civitai.com in settings, or allow the host through "
             "LIVEBOUND_ALLOWED_SITES."
         )
-    return require_token()
+
+
+def prepare_token() -> str:
+    """Complete OAuth preparation before a publish-time clock is captured."""
+    return _request_token(True)
 
 
 def _headers(token: str | None, *, accept: str) -> dict[str, str]:
@@ -320,9 +329,14 @@ def post_json(
     authenticated: bool = True,
     response_type: type[dict] | type[list] = dict,
     retryable: bool = True,
+    prepared_token: str | None = None,
 ) -> Any:
     """POST JSON and return the expected container shape, with retries and logging."""
-    token = _request_token(authenticated)
+    if prepared_token is not None:
+        _check_credential_destination()
+        token = prepared_token if authenticated else None
+    else:
+        token = _request_token(authenticated)
     headers = _headers(token, accept=accept)
     started = time.monotonic()
     attempts = _MAX_ATTEMPTS if retryable else 1

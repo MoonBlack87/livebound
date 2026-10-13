@@ -120,36 +120,40 @@ def reschedule(post_id: int, *, when: str | None = None, offset_minutes: int | N
         raise ValueError("Post not found.")
     lifecycle.guard_reschedule(post)
 
+    remote_id = post.get("remote_post_id")
+    prepared_token = trpc.client.prepare_token() if remote_id else None
+    now = schedule.utcnow()
+
     # Resolve and check before writing anything: a refused time must leave the
     # row holding the one the maintainer can correct, not the one thrown out
     # (`LIF-19`).
     if offset_minutes is not None:
         target = schedule.resolve(mode=schedule.RELATIVE, offset_minutes=offset_minutes,
-                                  scheduled_at=None)
+                                  scheduled_at=None, now=now)
     else:
         target = schedule.parse_iso(when)
 
     if target is None:
         raise ValueError("Not a valid publish time.")
 
-    check = schedule.validate(target)
+    stamp, check = schedule.outbound_stamp(
+        target, now=now, relative=offset_minutes is not None,
+    )
     if not check.ok:
-        raise ValueError(check.message)
+        raise schedule.ScheduleRejected(check)
 
     if offset_minutes is not None:
         post_store.update(post_id, schedule_mode=schedule.RELATIVE,
                           schedule_offset_minutes=offset_minutes)
     else:
         post_store.update(post_id, schedule_mode=schedule.ABSOLUTE,
-                          scheduled_at=schedule.iso_z(target))
+                          scheduled_at=stamp)
 
-    remote_id = post.get("remote_post_id")
     if not remote_id:
         # Purely local so far - nothing to send, the push will use the new time.
-        return {"post_id": post_id, "published_at": schedule.iso_z(target), "sent": False}
+        return {"post_id": post_id, "published_at": stamp, "sent": False}
 
-    stamp = schedule.iso_z(target)
-    trpc.post_update(remote_id, published_at=stamp)
+    trpc.post_update(remote_id, published_at=stamp, prepared_token=prepared_token)
     post_store.set_fields(post_id, scheduled_at=stamp)
     events.record("scheduled", post_id=post_id, remote_post_id=remote_id,
                   detail={"published_at": stamp})

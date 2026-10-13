@@ -1,6 +1,6 @@
 """All scheduling arithmetic, in one place.
 
-The 60-minute rule is the app's single most dangerous constraint, because
+The platform's lead-time rule is dangerous because
 CivitAI does not enforce it the way one would expect. From ``updatePostHandler``:
 
     if (input.publishedAt && dayjs(input.publishedAt).isBefore(minimumScheduleTime))
@@ -72,6 +72,11 @@ def earliest_publish(now: datetime | None = None) -> datetime:
     return now + timedelta(minutes=config.POST_MINIMUM_SCHEDULE_MINUTES)
 
 
+def earliest_dispatch(now: datetime | None = None) -> datetime:
+    """First scheduled time Livebound sends, including transport headroom."""
+    return (now or utcnow()) + timedelta(minutes=config.POST_DISPATCH_SCHEDULE_MINUTES)
+
+
 def latest_publish(now: datetime | None = None) -> datetime:
     return add_months(now or utcnow(), config.POST_MAXIMUM_SCHEDULE_MONTHS)
 
@@ -89,6 +94,15 @@ class ScheduleCheck:
 
 
 OK = ScheduleCheck(True)
+
+
+class ScheduleRejected(ValueError):
+    """A rejected time with values for the frontend translation."""
+
+    def __init__(self, check: ScheduleCheck):
+        super().__init__(check.message)
+        self.code = check.code
+        self.params = check.params
 
 
 def validate(when: datetime | str | None, *, now: datetime | None = None) -> ScheduleCheck:
@@ -121,6 +135,34 @@ def validate(when: datetime | str | None, *, now: datetime | None = None) -> Sch
     return OK
 
 
+def validate_dispatch(when: datetime | str | None, *, now: datetime | None = None) -> ScheduleCheck:
+    """Check the serialized outbound time against the operational floor."""
+    now = now or utcnow()
+    check = validate(when, now=now)
+    if not check.ok:
+        return check
+    moment = parse_iso(when) if isinstance(when, str) else when
+    if moment < earliest_dispatch(now):
+        return ScheduleCheck(
+            False,
+            "dispatch_too_soon",
+            f"Choose a time at least {config.POST_DISPATCH_SCHEDULE_MINUTES} minutes "
+            f"ahead. CivitAI requires {config.POST_MINIMUM_SCHEDULE_MINUTES} minutes; "
+            "Livebound adds dispatch headroom. The post is still a draft.",
+            {"platform": config.POST_MINIMUM_SCHEDULE_MINUTES,
+             "dispatch": config.POST_DISPATCH_SCHEDULE_MINUTES},
+        )
+    return OK
+
+
+def outbound_stamp(when: datetime, *, now: datetime, relative: bool) -> tuple[str, ScheduleCheck]:
+    """Check exactly the millisecond timestamp that will be sent."""
+    if relative and when == earliest_dispatch(now) and when.microsecond % 1000:
+        when += timedelta(microseconds=1000 - when.microsecond % 1000)
+    stamp = iso_z(when)
+    return stamp, validate_dispatch(stamp, now=now)
+
+
 def spread(
     count: int,
     start: datetime | str,
@@ -138,7 +180,10 @@ def spread(
     begin = parse_iso(start) if isinstance(start, str) else start
     if begin is None:
         raise ValueError("Not a valid start time")
-    floor = earliest_publish(now)
+    floor = earliest_dispatch(now)
+    if floor.microsecond:
+        # Stored fixed times must retain the dispatch floor after serialization.
+        floor = floor.replace(microsecond=0) + timedelta(seconds=1)
     begin = max(begin, floor)
     step = timedelta(minutes=max(1, interval_minutes))
     return [begin + step * index for index in range(max(0, count))]
@@ -169,8 +214,8 @@ def resolve(
 
     During a push, callers resolve here only in the closing publish-time step.
     Relative offsets below the legal minimum are raised to the earliest allowed
-    instant instead of being rejected: "in 30 minutes" is a clear intent, and the
-    honest answer is "the soonest CivitAI permits", not a failed push. Absolute
+    instant instead of being rejected: "in 5 minutes" is a clear intent, and the
+    honest answer is the earliest safe outbound time, not a failed push. Absolute
     times are returned untouched so that :func:`validate` can judge them.
     """
     now = now or utcnow()
@@ -178,7 +223,7 @@ def resolve(
         if offset_minutes is None:
             return None
         moment = now + timedelta(minutes=max(0, offset_minutes))
-        floor = earliest_publish(now)
+        floor = earliest_dispatch(now)
         return max(moment, floor)
     return parse_iso(scheduled_at) if isinstance(scheduled_at, str) else scheduled_at
 
@@ -233,7 +278,7 @@ def parse_offset(text: str) -> int | None:
 
 def relative_floor_minutes() -> int:
     """Smallest offset the UI should offer, in whole minutes."""
-    return config.POST_MINIMUM_SCHEDULE_MINUTES
+    return config.POST_DISPATCH_SCHEDULE_MINUTES
 
 
 def effective_publish_at(post: dict, *, now: datetime | None = None) -> datetime | None:
