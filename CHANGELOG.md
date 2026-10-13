@@ -2,6 +2,11 @@
 
 Notable changes to Livebound are recorded here, newest first.
 
+## 1.0.1 - 2026-10-13
+
+- Schedule posts with CivitAI's 10-minute minimum lead time plus one minute of delivery reserve, instead of the previous 60-minute limit.
+- Keep expired absolute schedules as drafts and prevent automatic retries of publish-time changes.
+
 ## 1.0.0 - 2026-09-12
 
 - Local-first browser workspace for organising AI images from existing folders without rewriting original files.

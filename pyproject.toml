@@ -1,6 +1,6 @@
 [project]
 name = "livebound"
-version = "1.0.0"
+version = "1.0.1"
 description = "Local-first publishing for Civitai creators."
 authors = [{ name = "Moonbear_AIArt (MoonBlack87)" }]
 license = "AGPL-3.0-or-later"

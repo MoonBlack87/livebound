@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 APP_NAME = "livebound"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 USER_AGENT = f"{APP_NAME}/{APP_VERSION}"
 PYTHON_VERSION_FLOOR = (3, 12)
 
